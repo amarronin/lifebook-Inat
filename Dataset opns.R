@@ -11,7 +11,6 @@ dsetopn = function(csv_name)
 {
 data <- read.csv("observations-206143.csv")
 da1 = data.frame(data)
-data$obs_date = as.Date(data$observed_on)
 #takes one obs by latest date
 da2 = da1 %>%
   arrange(scientific_name,desc(id))%>%
@@ -24,5 +23,5 @@ da2 = da1 %>%
 }
 
 amt = c("observations-206143")
-dsetopn(csv_name = amt)
+dsetopn(csv_name=observations-206143)
 
