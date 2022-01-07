@@ -1,0 +1,118 @@
+---
+title: "Lbook"
+author: "Amar"
+date: "1/6/2022"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+  html_document:
+    toc: yes
+    toc_depth: 5
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE)
+```
+Under This block, add all codes
+```{r, echo=FALSE, include= FALSE}
+library("jpeg")
+library(tidyverse)
+library(magrittr)
+data <- read.csv("observations-206604.csv")
+da1 = data.frame(data)
+#takes one obs by latest date
+da2 = da1 %>%
+  arrange(scientific_name,desc(id))%>%
+  arrange(taxon_family_name,taxon_genus_name,scientific_name) %>%
+  group_by(taxon_family_name,taxon_genus_name,scientific_name) %>%
+  slice(1)
+
+#dataset from Dataset opns to be fed here
+#Dependency: jpeg 
+da3 = da2 %>% group_by(id)
+img_loc = paste(getwd(),"/images/",sep="")
+da3$img_id = paste(img_loc,da3$scientific_name,"_",da3$id,".jpg",sep = "")
+
+#Take a list of already existing jpg files
+l_b = list.files(path=img_loc, pattern=".jpg", all.files=TRUE,
+           full.names=TRUE)
+
+#filter l_b from da3
+da4 = subset(da3,!(img_id %in% c(l_b)))%>% group_by(img_id) %>% dplyr::select(image_url,img_id)
+
+#Downloads rest all Files i.e, from da4$img_url
+if (nrow(da4) == 0)
+  {print("All files are already in folder")} else {
+  for (r in 1: nrow(da4)){
+      img_url = toString(da4[r,1])
+      fin = toString(da4[r,2])
+      download.file(img_url,fin, mode = 'wb')
+   }  
+  }
+
+da_rep = da3 %>% arrange(taxon_phylum_name,taxon_class_name,taxon_order_name,
+                         taxon_family_name,taxon_genus_name,
+                         scientific_name)
+da_rep = da_rep %>% dplyr::select(taxon_phylum_name,taxon_class_name,
+                           taxon_order_name,
+                           taxon_family_name,taxon_genus_name,
+                           scientific_name,img_id,id,url,observed_on,place_guess)
+cn = c(unique(da_rep$taxon_class_name))
+cnl = length(cn)
+
+
+Names = c(da_rep$scientific_name)
+Img = c(da_rep$img_id)
+url = c(da_rep$url)
+loc = c(da_rep$place_guess)
+dat = c(da_rep$observed_on)
+```
+
+Now print results:
+```{r, results='asis'}
+library(raster)
+c = nrow(da_rep)
+for(c in 1:cnl){ #class
+  cat("#",cn[c],"\n\n")
+  da_rep_c = da_rep %>% filter(taxon_class_name == cn[c])
+  on = c(unique(da_rep_c$taxon_order_name))
+  onl = length(on)  
+  for(o in 1:onl){ #order
+    cat("##",on[o],"\n\n")
+    da_rep_o = da_rep %>% filter(taxon_order_name == on[o])
+    fn = c(unique(da_rep_o$taxon_family_name))
+    fnl = length(fn)  
+      for(f in 1:fnl){ #family
+      cat("###",fn[f],"\n\n")
+      da_rep_f = da_rep %>% filter(taxon_family_name == fn[f])
+      gn = c(unique(da_rep_f$taxon_genus_name))
+      gnl = length(gn)  
+              for(g in 1:gnl){ #genus
+                cat("####",gn[g],"\n\n")
+                da_rep_g = da_rep %>% filter(taxon_genus_name == gn[g])
+                spn = c(unique(da_rep_g$scientific_name))
+                spnl = length(spn)
+                Img = c(da_rep_g$img_id)
+                url = c(da_rep_g$url)
+                loc = c(da_rep_g$place_guess)
+                dat = c(da_rep_g$observed_on)
+      for( i in 1:spnl){ #species
+      cat("#####",spn[i],"\n")
+      
+        r <- brick(file.path(Img[i]))
+          plotRGB(r)
+          
+        cat("\n\n","Taken in",loc[i],"on[",dat[i],"].(" ,url[i],")","\n\n")
+        
+      }
+    
+              }
+      }
+  }
+
+}
+
+```
