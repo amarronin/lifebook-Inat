@@ -1,27 +1,44 @@
 ---
-title: "Lbook"
-author: "Amar"
-date: "1/6/2022"
+title: "Lifebook"
+author: "Amara Bharathy"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
+  word_document:
     toc: yes
     toc_depth: '5'
-  html_document:
-    toc: yes
-    toc_depth: 5
-    df_print: paged
+    number_sections: true
+
 ---
 
 ```{r setup, include=FALSE}
 library(knitr)
 opts_chunk$set(echo = FALSE)
+options(max.print=100000000)
 ```
-Under This block, add all codes
+
+#Introduction
+
+I was in midst of a jungle looking at a odonate I almost know the ID of, but couldnt spell it out. I have seen it numerous times and recorded it in Inat as well. But here I was choking! There I came up with the idea of creating an offline checklist of my inat observations arranged in taxonomic way with my images. Follow these steps:
+
+This is an R markdown powered output that generates docx document of all observations from the inat export <https://www.inaturalist.org/observations/export>. Make sure you have R studio installed and I expect you to have some basic R code skills to debug.
+
+Please select all the Taxon extra columns getting selected from the export.
+![Make sure you select all](ss.png) Now create a folder with this program and a folder named "Images" inside the same folder. Run this by pasting the csv name in below code.
+
+
+You can also view take the  updated code from here <https://github.com/amarronin/lifebook-Inat>.
+
+Follow me on: 
+*Inaturalist <https://www.inaturalist.org/people/1145440>.
+*Instagram <https://www.instagram.com/amar_ronin/>.
+
+
 ```{r, echo=FALSE, include= FALSE}
 library("jpeg")
 library(tidyverse)
 library(magrittr)
-data <- read.csv("observations-206604.csv")
+suppressMessages(library(tidyverse))
+data <- read.csv("observations-207267.csv") #paste your csv name here
 da1 = data.frame(data)
 #takes one obs by latest date
 da2 = da1 %>%
@@ -49,17 +66,17 @@ if (nrow(da4) == 0)
   for (r in 1: nrow(da4)){
       img_url = toString(da4[r,1])
       fin = toString(da4[r,2])
-      download.file(img_url,fin, mode = 'wb')
+      if(img_url != "" ){download.file(img_url,fin, mode = 'wb')}
    }  
   }
 
 da_rep = da3 %>% arrange(taxon_phylum_name,taxon_class_name,taxon_order_name,
                          taxon_family_name,taxon_genus_name,
-                         scientific_name)
+                         scientific_name) %>% filter(image_url != "")
 da_rep = da_rep %>% dplyr::select(taxon_phylum_name,taxon_class_name,
                            taxon_order_name,
                            taxon_family_name,taxon_genus_name,
-                           scientific_name,img_id,id,url,observed_on,place_guess)
+                           scientific_name,img_id,id,url,observed_on,place_guess,common_name)
 cn = c(unique(da_rep$taxon_class_name))
 cnl = length(cn)
 
@@ -71,7 +88,7 @@ loc = c(da_rep$place_guess)
 dat = c(da_rep$observed_on)
 ```
 
-Now print results:
+
 ```{r, results='asis'}
 library(raster)
 c = nrow(da_rep)
@@ -99,14 +116,17 @@ for(c in 1:cnl){ #class
                 url = c(da_rep_g$url)
                 loc = c(da_rep_g$place_guess)
                 dat = c(da_rep_g$observed_on)
+                cnm = ifelse(da_rep_g$common_name == "",c(da_rep_g$scientific_name),
+                c(paste(da_rep_g$common_name," (",da_rep_g$scientific_name,")",sep = "")))
       for( i in 1:spnl){ #species
-      cat("#####",spn[i],"\n")
+     #cat("\newpage")  
+      cat("#####",cnm[i],"\n\n")
       
         r <- brick(file.path(Img[i]))
-          plotRGB(r)
+        plotRGB(r)
           
-        cat("\n\n","Taken in",loc[i],"on[",dat[i],"].(" ,url[i],")","\n\n")
-        
+        cat("\n\n","Taken in",loc[i],"on [",dat[i],"](",url[i],")","\n\n")
+        #cat("\pagebreak")  
       }
     
               }
