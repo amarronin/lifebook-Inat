@@ -39,18 +39,17 @@ library(tidyverse)
 library(magrittr)
 suppressMessages(library(tidyverse))
 data <- read.csv("observations-207267.csv") #paste your csv name here
-da1 = data.frame(data)
-#takes one obs by latest date
+da1 = data.frame(data) #convert to dataframe
+#takes one obs by latest date equivalent to nodupkey by group_by vars
 da2 = da1 %>%
   arrange(scientific_name,desc(id))%>%
   arrange(taxon_family_name,taxon_genus_name,scientific_name) %>%
   group_by(taxon_family_name,taxon_genus_name,scientific_name) %>%
   slice(1)
 
-#dataset from Dataset opns to be fed here
 #Dependency: jpeg 
 da3 = da2 %>% group_by(id)
-img_loc = paste(getwd(),"/images/",sep="")
+img_loc = paste(getwd(),"/images/",sep="") #location to save images
 da3$img_id = paste(img_loc,da3$scientific_name,"_",da3$id,".jpg",sep = "")
 
 #Take a list of already existing jpg files
@@ -69,49 +68,67 @@ if (nrow(da4) == 0)
       if(img_url != "" ){download.file(img_url,fin, mode = 'wb')}
    }  
   }
-
+#sometimes you can enter observations in Inat without images. Hence
+#they wont have image_url. We dont want those records. Filering out:
 da_rep = da3 %>% arrange(taxon_phylum_name,taxon_class_name,taxon_order_name,
                          taxon_family_name,taxon_genus_name,
                          scientific_name) %>% filter(image_url != "")
+
+#selecting only needed columns.
+#using dplyr::select to avoid package confusions
 da_rep = da_rep %>% dplyr::select(taxon_phylum_name,taxon_class_name,
                            taxon_order_name,
                            taxon_family_name,taxon_genus_name,
                            scientific_name,img_id,id,url,observed_on,place_guess,common_name)
+
+#creating cn, cnl for looping
 cn = c(unique(da_rep$taxon_class_name))
 cnl = length(cn)
 
 
-Names = c(da_rep$scientific_name)
-Img = c(da_rep$img_id)
-url = c(da_rep$url)
-loc = c(da_rep$place_guess)
-dat = c(da_rep$observed_on)
+#Names = c(da_rep$scientific_name)
+#Img = c(da_rep$img_id)
+#url = c(da_rep$url)
+#loc = c(da_rep$place_guess)
+#dat = c(da_rep$observed_on)
 ```
 
 
 ```{r, results='asis'}
 library(raster)
-c = nrow(da_rep)
+c = nrow(da_rep) #overall outer loop will be decided by number of different classes: Under that comes order, family, genus and common name(scientific name)
 for(c in 1:cnl){ #class
+  #prints Class: (\n\n gives 2 enter spaces after Class)
   cat("#",cn[c],"\n\n")
+  #filter this loop's class alone:
   da_rep_c = da_rep %>% filter(taxon_class_name == cn[c])
+  #under this loop find the orders and its length(number of orders) to be fed to next loop
   on = c(unique(da_rep_c$taxon_order_name))
   onl = length(on)  
   for(o in 1:onl){ #order
+    #prints order:
     cat("##",on[o],"\n\n")
+    #filter current order:
     da_rep_o = da_rep %>% filter(taxon_order_name == on[o])
+    #find families and their counts
     fn = c(unique(da_rep_o$taxon_family_name))
     fnl = length(fn)  
       for(f in 1:fnl){ #family
+      #prints family:  
       cat("###",fn[f],"\n\n")
+      #filter family  
       da_rep_f = da_rep %>% filter(taxon_family_name == fn[f])
+      #find genus and their counts
       gn = c(unique(da_rep_f$taxon_genus_name))
       gnl = length(gn)  
               for(g in 1:gnl){ #genus
+                #prints genus
                 cat("####",gn[g],"\n\n")
+                #genus counts
                 da_rep_g = da_rep %>% filter(taxon_genus_name == gn[g])
                 spn = c(unique(da_rep_g$scientific_name))
                 spnl = length(spn)
+                #create image name, url, location, date to print
                 Img = c(da_rep_g$img_id)
                 url = c(da_rep_g$url)
                 loc = c(da_rep_g$place_guess)
@@ -120,13 +137,14 @@ for(c in 1:cnl){ #class
                 c(paste(da_rep_g$common_name," (",da_rep_g$scientific_name,")",sep = "")))
       for( i in 1:spnl){ #species
      #cat("\newpage")  
+      #prints common name(scientific name)  
       cat("#####",cnm[i],"\n\n")
-      
+        #This is the part where pic is printed
         r <- brick(file.path(Img[i]))
         plotRGB(r)
-          
+        
+        #Here location, date added with url as hyperlink to date [text] (url) 
         cat("\n\n","Taken in",loc[i],"on [",dat[i],"](",url[i],")","\n\n")
-        #cat("\pagebreak")  
       }
     
               }
